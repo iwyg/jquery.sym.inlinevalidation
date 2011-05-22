@@ -1,0 +1,19 @@
+<form enctype="multipart/form-data" method="post" action="/main/blog/post/comment-ajax-validate?debug">
+          <fieldset>
+            <input type="hidden" value="5242880" name="MAX_FILE_SIZE">
+            <label for="author">Name<em>*</em></label>
+            <input type="text" value="" name="fields[author]" id="author">
+            <label for="e-mail">E-Mail<em>*</em></label>
+            <input type="text" value="" name="fields[e-mail]" id="e-mail">
+            <label for="url">URL</label>
+            <input type="text" value="" name="fields[url]" id="url">
+            <label for="message">Comment<em>*</em></label>
+            <textarea cols="21" rows="5" name="fields[message]" id="message"></textarea>
+            <input type="hidden" value="2" name="fields[blogpost]">
+            
+            <!-- this will be added to the submit url as an additional url param -->
+            <input type="hidden" value="hello-world" name="fields[entry]">
+            
+            <input type="submit" value="" name="action[comment-submit]" id="submit">
+          </fieldset>
+        </form>
