@@ -207,7 +207,7 @@
 		 * @param 	callback	function : function that is called after after xhr request was cemplete
 		 */	
 		_preProcessResponse : (function () {
-			if ($.browser.msie) {
+			if ( $.browser.msie && $.browser.version < 9 ) {
 				return function( mode, data ){
 					var xml;
 					mode = mode || 'xml';
@@ -359,7 +359,6 @@
 			elem.removeClass( 'loading' );
 			// e.g remove loading class
 		},
-		
 		/**
 		 * comes in handy if you use the jQuery.events.destroyed
 		 * plugin will teardown automatically
