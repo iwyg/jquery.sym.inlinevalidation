@@ -17,6 +17,10 @@
  *   
  * changelog:
  * --------------------------------------------------------------------------------------------
+ * - 0.3b:
+ * --------------------------------------------------------------------------------------------
+ *		- fixed issue: checkboxes had returned false required-field check (value, always on)
+ * --------------------------------------------------------------------------------------------
  * - 0.2b:
  * --------------------------------------------------------------------------------------------
  *		- fixed msie issues
@@ -36,30 +40,43 @@
  */
 
 
-(function($){
+(function($,global){
 	var exp_action = '[name^=action]',	
 		exp_fieldname = /[^\[]([\w\-\d]+)/g,
 		exp_stripspace = /\n+\s+/g,
-		body = $('body'),
+		//body = $(global.document.body),
 		errorHandler = {
 			error1 : function (fn , args) {
 				throw new Error( fn + ': expects exactly two arguments, but arguments length is'+ args.length );
 			}
 		};
-		
+	function getFieldValue( field, name ){
+		if (( name === 'input' || name === 'textarea' )) {
+			if (field.type === 'checkbox' || field.type === 'radio') {
+				if (field.checked) {
+					return 'on';	
+				} else {
+					return '';
+				}						
+			} else {
+				return field.value;
+			}
+		}
+		return '';		
+	}	
 	function ValidationSubmit ( ) {		
 		this._init.apply(this, arguments);
 	}
 	
 	ValidationSubmit.prototype = {
 		/**
-		 * @param 	elem	HTMLFormElement
-		 * @param 	o		Object literal : user options
-		 */
+		* @param {Object} elem : HTMLFormElement
+		* @param {Object} o : Object literal : user options
+		*/
 		nameSpace : 'SymphonyFormInlineValidate',
 		
 		_init : function ( elem, o ) {
-			var params, atoms, atomsFixedVars, prefix;
+			var params, atoms, atomsFixedVars, prefix, i, l, temp;
 
 			if ( arguments.length < 2 ) {
 				errorHandler.error1('_init', arguments);
@@ -80,16 +97,15 @@
 				atomsFixedVars = this.options.urlParamsFixedVars.split(',');
 				atoms.push.apply(atoms, atomsFixedVars);
 				
-				for ( var i=0, temp, l=atoms.length; i < l ; i++ ) {
+				for ( i=0, l=atoms.length; i < l ; i++ ) {
 					
 					temp = this.form.find( atoms[i] )[0];
 					prefix = i === 0 ? '?' : '&';
 					if (i < (l-atomsFixedVars.length )){
 						params+= prefix + temp.name.match(exp_fieldname)[1] +'='+ temp.value;	
 					} else {
-						params+= '&' + atoms[i];	
-					}
-					
+						params+= '&' + atoms[i];
+					}					
 				}				
 			}
 			
@@ -98,10 +114,10 @@
 				params = '';
 				atoms = this.options.urlParamsFixedVars.split(',');
 				
-				for (var i=0,temp,l=atoms.length; i < l ; i++) {
+				for (i=0, l=atoms.length; i < l ; i++) {
 					prefix = i === 0 ? '?' : '&';
-					params+= '&' + atoms[i];	
-				}				 			
+					params+= '&' + atoms[i];
+				}
 			}
 			
 			if (!!params ) {
@@ -110,6 +126,7 @@
 			
 			this._bind();
 			this._getRequiredFileds();
+			this.form.trigger('formready');
 		},
 		_getRequiredFileds : function () {
 			var that = this;
@@ -124,8 +141,8 @@
 		},
 		
 		/**
-		 * @param 	event	eventdata object
-		 */				
+		* @param {Object} event : eventdata Objectliteral
+		*/				
 		_onSubmit : function( event ){			
 			var unlock = true, that = this,
 			post,flds = $();
@@ -149,13 +166,13 @@
 				post = this.getPostVars( this.form, this.action, 'form' );				
 				this.postRequest( post, 'html', function( html ) {
 					this._getSubmitResults( html );
-				}); 				
-			} 			
+				});
+			}	
 		},
 		
 		/**
-		 * @param 	data	string : xhr response text
-		 */			
+		* @param {String} data : xhr response text
+		*/			
 		_getSubmitResults : function ( data ) {
 			var eventNode, result, parsedResult, response, args, argsobj, method;				
 				response = $( data );				
@@ -179,20 +196,20 @@
 		},
 		
 		/**
-		 * @param 	event	object eventdata 
-		 * @param 	field	html input or texarea element
-		 */		
+		* @param {Object} event : eventdata 
+		* @param {Object} field : html input or texarea element
+		*/		
 		_onBlur : function ( event, field ) {
-			var that = this,
+			var //that = this,
 				elem = event ? event.target : field,
 				name = elem.nodeName.toLowerCase(),
 				input = ( name === 'input' || name === 'textarea' ) ? $( elem ) : $(),
 				post = this.getPostVars( input, this.action, name );
-				
-				
+
 				if ( elem.type === 'submit' || elem.type === 'reset' ) {
 					return;
 				}
+				
 				//invoke validationStart callback
 				this._onValidationStart( input );
 				this.postRequest(post, function( xml ){
@@ -202,40 +219,40 @@
 		},
 		
 		/**
-		 * @param 	data	string : serialized form data
-		 * @param 	mode	string : 'xml' or 'html || text'
-		 * @param 	callback	function : function that is called after after xhr request was cemplete
-		 */	
+		* @param {String} data : serialized form data
+		* @param {String} mode : 'xml' or 'html || text'
+		* @param {Function} callback : function that is called after after xhr request was cemplete
+		*/	
 		_preProcessResponse : (function () {
-			if ( $.browser.msie && $.browser.version < 9 ) {
+			if ($.browser.msie && $.browser.version < 9) {
 				return function( mode, data ){
 					var xml;
 					mode = mode || 'xml';
 					if (mode === 'xml') {						
 						xml = $(data)[0];
-						xml = new ActiveXObject("Microsoft.XMLDOM");
+						xml = new global.ActiveXObject("Microsoft.XMLDOM");
 						xml.async = false;
 						xml.loadXML(data);						
-					}
-					
+					}					
 					else {
 						xml = data;
 					}
 					return xml;
 				};
-			} else return function(mode, data){
-				
-				return data;
-			};
+			} else {
+				return function(mode, data){				
+					return data;
+				};
+			}
 		}()),
 		postRequest : function( data, mode, callback ) {
-			var that = this,indendedMode;
+			var that = this,intendedMode;
 			if ( typeof mode === 'function' && !callback ) {
 				callback = mode;mode = undefined;
 			}
 			
 			if (!mode) {
-				indendedMode = 'xml';
+				intendedMode = 'xml';
 			}					   
 			if ($.browser.msie && (!mode || mode === 'xml') ) {
 				mode = 'text';
@@ -247,7 +264,7 @@
 				dataType : mode || 'xml',
 				type : "POST",
 				dataFilter : function ( response ) {					
-					return that._preProcessResponse(indendedMode,response);
+					return that._preProcessResponse(intendedMode,response);
 				},
 				success : function ( response ) {					
 					callback.call( that, response );
@@ -259,34 +276,34 @@
 		},
 		
 		/**
-		 * @param 	elem 	DOMnode, input formelement 
-		 * @param 	action 	name of submit action
-		 * @param 	name	elem nodeName
-		 */		
+		* @param {Object} elem : HTMLInputElement 
+		* @param {String} action : name of submit action
+		* @param {String} name : elem nodeName
+		*/		
 		getPostVars : function ( elem, action, name ) {	
-			return ( ( name === 'input' || name === 'textarea' ) ? elem[0].name + '=' + elem[0].value : name === 'form' ?  elem.serialize()  :  '' ) + '&' + action;
+			var value = getFieldValue(elem[0],name);
+			return ( ( name === 'input' || name === 'textarea' ) ? elem[0].name + '=' + value : name === 'form' ?  elem.serialize()  :  '' ) + '&' + action;
 		},
 		
 		/**
-		 * Parses the response xml and checks if field is required
-		 * and if it validates
-		 * =====================================================
-		 * @param 	data	xml document
-		 * @param 	elem	DOMnode, formelement input
-		 * @param 	prevalidate	bool
-		 */		
+		* Parses the response xml and checks if field is required
+		* and if it validates
+		* =====================================================
+		* @param {Object} data : XMLDocument
+		* @param {Object} elem : HTMLInputElement
+		* @param {Boolean}	prevalidate	
+		*/		
 		_postProcessValidation : function( data, elem, prevalidate ) {				
 			var n = elem[0].name.match( exp_fieldname )[1],
 				a = this.name, d = $( data ), e = d.find( 'events' ).find( a ),
 				o, field = e.find( n ), mayFail = e.children().filter( n ),
-				type, required ;				
+				type, required, i,l;				
+				
 				// check if out field does not colide width status message node
 				if ( mayFail.length > 1 ) {
-					for ( var i = 0, l = mayFail.length; i<l; i++ ) {
+					for ( i = 0, l = mayFail.length; i<l; i++ ) {
 						if ( mayFail[i].getAttribute( 'type' ) ) {
-							mayFail = $( mayFail[i] );
-							field = mayFail;
-							break;
+							mayFail = $( mayFail[i] );field = mayFail;break;
 						} 
 					}
 				}
@@ -296,7 +313,7 @@
 					if (type === 'missing') {
 						elem.data(this.nameSpace+'-field-required', true );
 						this.requiredFields.push( elem );
-					} 				
+					}
 				}
 				
 				if ( ( type !=='missing' && type !=='invalid' ) ) {
@@ -320,60 +337,61 @@
 					elem.data( this.nameSpace+'-field-validates', false );		
 					
 					!prevalidate && this.options.onValidationError.apply( elem, [ o, field ] );					
-				}															
+				}
 		},
 		
 		/**
-		 * @param 	message		Object Literal, contains validation info
-		 * @param 	name		field name
-		 * @param 	required 	bool or undefined
-		 */				
-		onValidationSuccess : function( message, name, required ) {			
+		* @param {Object} message : Object Literal, contains validation info
+		* @param {String} name : field name
+		* @param {Boolean or Undefined}	required
+		*/				
+		onValidationSuccess : function( message, name, required ) {
 			if ( required ) {
-				this.css( {borderColor:'greenyellow'} );	
+				this.css( {borderColor:'greenyellow'} );
 			} else {
-				this.css( {borderColor:''} );	
+				this.css( {borderColor:''} );
 			}
 		},
 		
 		/**
-		 * @param 	message		Object Literal, contains validation info
-		 * @param 	name		field name
-		 */				
+		* @param {Object} message : Object Literal, contains validation info
+		* @param {String} name : field name
+		*/				
 		onValidationError : function( message, name ) {
-			this.css( {borderColor:'red'} );			
+			this.css( {borderColor:'red'} );
 		},
-		/**
-		 * @param 	elem 	DOMnode, input formelement 
-		 */
 		
-		_onValidationStart : function ( elem ) {			
+		/**
+		* @param {Object} elem : HTMLInputElement
+		*/
+		_onValidationStart : function ( elem ) {
 			// e.g add loading class
 			elem.addClass( 'loading' );
 		},
+
 		/**
-		 * @param 	elem 	DOMnode, input formelement 
-		 */		
-		
+		* @param {Object} elem : HTMLInputElement
+		*/
 		_onValidationEnd : function ( elem ) {
 			elem.removeClass( 'loading' );
 			// e.g remove loading class
 		},
+		
 		/**
-		 * comes in handy if you use the jQuery.events.destroyed
-		 * plugin will teardown automatically
-		 * =====================================================
-		 */
+		* comes in handy if you use the jQuery.events.destroyed
+		* plugin will teardown automatically
+		* =====================================================
+		*/
 		teardown : function () {
-			
-			
+
+
 			this.form.unbind( 'detroyed', this.teardown );
 			this.options.doSubmit && this.form.unbind( 'submit', this._onSubmit );
-			this.form.undelegate( 'input, textarea', 'blur', this._onBlur );			
+			this.form.undelegate( 'input, textarea', 'blur', this._onBlur );
 			
-			this._destroy.call(this, this.form, this.nameSpace );		
+			this._destroy.call(this, this.form, this.nameSpace );
 			this._destroy.call(this, this.fields, this.nameSpace+'-field-validates' );
-			
+
 		},
 		_destroy : function( elem, name ){
 			elem.removeData( name );
@@ -382,10 +400,10 @@
 
 	ValidationSubmit.prototype.defaults = {
 		url:'',
-		resultSelector : '', // string, jquery selector
-		resultFilter : '', // string, jquery selector
-		urlParamsField : '',     // comma seperated list of field selectors: additional url parameter form hidden fields, eg "[name*=entry], [name*=blogpost]"
-		urlParamsFixedVars : '',          // comma seperated list , additional fixed url parameter "param1=foo,param2=baz"	
+		resultSelector : '',			// string, jquery selector
+		resultFilter : '',				// string, jquery selector
+		urlParamsField : '',			// comma seperated list of field selectors: additional url parameter form hidden fields, eg "[name*=entry], [name*=blogpost]"
+		urlParamsFixedVars : '',		// comma seperated list , additional fixed url parameter "param1=foo,param2=baz"	
 		onSubmitStart:function(){},
 		onSubmitEnd:function(){},
 		onSubmitSuccess:function(){},
@@ -401,4 +419,4 @@
 			$(this).data( ValidationSubmit.prototype.nameSpace, new ValidationSubmit(this, options) );
 		});
 	};
-}(this.jQuery));
+}(this.jQuery,this));
