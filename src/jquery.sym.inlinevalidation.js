@@ -17,6 +17,11 @@
  *   
  * changelog:
  * --------------------------------------------------------------------------------------------
+ * - 0.4b:
+ * --------------------------------------------------------------------------------------------
+ *		- changed blur event to change event (blur caused some trouble on chekboxes)
+ *		- fixed html5 jQuery.data() naming convention change introduced in 1.6
+ * --------------------------------------------------------------------------------------------
  * - 0.3b:
  * --------------------------------------------------------------------------------------------
  *		- fixed issue: checkboxes had returned false required-field check (value, always on)
@@ -27,7 +32,8 @@
  * -------------------------------------------------------------------------------------------- 
  * - 0.1b:
  * --------------------------------------------------------------------------------------------
- *		- fixed false http request method caused by a missing trailing slash in the url string
+ *		- fixed false http request type (GET instead of POST) caused by a missing trailing slash 
+ *        in the url string
  * --------------------------------------------------------------------------------------------
  *   
  * known issues:
@@ -45,11 +51,21 @@
 		exp_fieldname = /[^\[]([\w\-\d]+)/g,
 		exp_stripspace = /\n+\s+/g,
 		//body = $(global.document.body),
+		err = function err(o) {
+			var e = new Error(o.message);
+				e.name = o.name || e.name;
+				return e;
+		},
 		errorHandler = {
 			error1 : function (fn , args) {
-				throw new Error( fn + ': expects exactly two arguments, but arguments length is'+ args.length );
+				throw err({
+					name: 'ArgumentsError',
+					message: fn+' expects exactly two arguments, but arguments length is'+ args.length
+				});
 			}
-		};
+		},
+		$_version = parseFloat($.fn.jquery);
+		
 	function getFieldValue( field, name ){
 		if (( name === 'input' || name === 'textarea' )) {
 			if (field.type === 'checkbox' || field.type === 'radio') {
@@ -76,7 +92,7 @@
 		nameSpace : 'SymphonyFormInlineValidate',
 		
 		_init : function ( elem, o ) {
-			var params, atoms, atomsFixedVars, prefix, i, l, temp;
+			var params, atoms, atomsFixedVars, prefix, i=0,j=0, l, temp;
 
 			if ( arguments.length < 2 ) {
 				errorHandler.error1('_init', arguments);
@@ -97,7 +113,7 @@
 				atomsFixedVars = this.options.urlParamsFixedVars.split(',');
 				atoms.push.apply(atoms, atomsFixedVars);
 				
-				for ( i=0, l=atoms.length; i < l ; i++ ) {
+				for (l=atoms.length; i < l ; i++ ) {
 					
 					temp = this.form.find( atoms[i] )[0];
 					prefix = i === 0 ? '?' : '&';
@@ -114,9 +130,9 @@
 				params = '';
 				atoms = this.options.urlParamsFixedVars.split(',');
 				
-				for (i=0, l=atoms.length; i < l ; i++) {
-					prefix = i === 0 ? '?' : '&';
-					params+= '&' + atoms[i];
+				for (l=atoms.length; j < l ; j++) {
+					prefix = j === 0 ? '?' : '&';
+					params+= '&' + atoms[j];
 				}
 			}
 			
@@ -131,11 +147,11 @@
 		_getRequiredFileds : function () {
 			var that = this;
 			this.fields.each(function(){
-				that._onBlur(undefined, this);
+				that._onChange(undefined, this);
 			});
 		},
 		_bind : function () {
-			this.form.delegate('input, textarea', 'blur',  $.proxy( this._onBlur, this ) );
+			this.form.delegate('input, textarea', 'change',  $.proxy( this._onChange, this ) );
 			this.options.doSubmit && this.form.bind( 'submit',  $.proxy( this._onSubmit, this ) );
 			this.form.bind('destroyed', $.proxy( this.teardown, this ) );	
 		},
@@ -145,19 +161,24 @@
 		*/				
 		_onSubmit : function( event ){			
 			var unlock = true, that = this,
-			post,flds = $();
+			fields = this.fields,
+			post,flds = $(),l = fields.length, i = 0,
+			
+			// legacy support for jquery < 1.6
+			dataName = $_version < 1.6 ? this.nameSpace+'-field-validates' : $.camelCase(this.nameSpace+'-field-validates');
 			event.preventDefault();						
+			
 			// check if all fields allready validate
-			this.fields.each(function(){
-				if ( !$(this).data( that.nameSpace+'-field-validates' ) ) {	
-					that._onBlur({target:this});
-					flds.push(this);				
-				}
-			});
+			for (; i<l; i++) {				
+				if ( !$(fields[i]).data(dataName) ) {	
+					that._onChange({target:fields[i]});
+					flds.push(fields[i]);				
+				}				
+			}
 			
 			if( flds.length ){
 				unlock = false;
-				this.options.submitLock.call(this,this.requiredFields);
+				this.options.submitLock.call(this, this.requiredFields);
 				return;				
 			}
 			
@@ -199,7 +220,7 @@
 		* @param {Object} event : eventdata 
 		* @param {Object} field : html input or texarea element
 		*/		
-		_onBlur : function ( event, field ) {
+		_onChange : function ( event, field ) {
 			var //that = this,
 				elem = event ? event.target : field,
 				name = elem.nodeName.toLowerCase(),
@@ -240,7 +261,7 @@
 					return xml;
 				};
 			} else {
-				return function(mode, data){				
+				return function(mode, data){			
 					return data;
 				};
 			}
@@ -260,6 +281,7 @@
 			
 			$.ajax({				
 				url : this.options.url,				
+				global: false,
 				data : data,
 				dataType : mode || 'xml',
 				type : "POST",
@@ -309,6 +331,7 @@
 				}
 				
 				type = mayFail.attr( 'type' );
+
 				if (prevalidate) {
 					if (type === 'missing') {
 						elem.data(this.nameSpace+'-field-required', true );
@@ -387,7 +410,7 @@
 
 			this.form.unbind( 'detroyed', this.teardown );
 			this.options.doSubmit && this.form.unbind( 'submit', this._onSubmit );
-			this.form.undelegate( 'input, textarea', 'blur', this._onBlur );
+			this.form.undelegate( 'input, textarea', 'blur', this._onChange );
 			
 			this._destroy.call(this, this.form, this.nameSpace );
 			this._destroy.call(this, this.fields, this.nameSpace+'-field-validates' );
@@ -413,7 +436,10 @@
 		onValidationError:ValidationSubmit.prototype.onValidationError,
 		onValidationSuccess : ValidationSubmit.prototype.onValidationSuccess
 	};
-	
+	// remove this
+	if ($.fn.SymphonyFormInlineValidate) {
+		delete $.fn.SymphonyFormInlineValidate;
+	} 
 	$.fn.SymphonyFormInlineValidate = function( options ) {
 		return this.each( function() {
 			$(this).data( ValidationSubmit.prototype.nameSpace, new ValidationSubmit(this, options) );

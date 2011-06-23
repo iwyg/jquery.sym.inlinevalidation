@@ -32,6 +32,26 @@ This example describes the case, that you do a submit form for e.g. blog comment
 
 Please refer to the script comments and the example implementation file ( implementation.js ) for detailed information
 
+## CHANGELOG
+
+### 0.4b:
+
+- changed blur event to change event (blur caused some trouble on chekboxes)
+- fixed html5 jQuery.data() naming convention change introduced in 1.6
+
+### 0.3b:
+
+- fixed issue: checkboxes had returned false required-field check (value, always on)
+
+### 0.2b:
+
+- fixed msie issues
+
+### 0.1b:
+
+- fixed false http request type (GET instead of POST) caused by a missing trailing slash in the url string
+
+
 ## TODO:
 
 - I haven't tested this script on form elements like check - and select-boxes, radiobuttons, though it should work on these too.
