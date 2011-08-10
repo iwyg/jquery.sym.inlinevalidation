@@ -34,6 +34,12 @@ Please refer to the script comments and the example implementation file ( implem
 
 ## CHANGELOG
 
+### 1:
+
+- considered stable
+- there was an error in the last commit (0.4b) preventing eventbinding for change and blur events
+
+
 ### 0.4b:
 
 - changed blur event to change event (blur caused some trouble on chekboxes)
@@ -54,7 +60,7 @@ Please refer to the script comments and the example implementation file ( implem
 
 ## TODO:
 
-- I haven't tested this script on form elements like check - and select-boxes, radiobuttons, though it should work on these too.
+- <del>I haven't tested this script on form elements like check - and select-boxes, radiobuttons, though it should work on these too.</del>
 
 - <del>I haven't tested this script on IE < 9 and Opera</del>
 
