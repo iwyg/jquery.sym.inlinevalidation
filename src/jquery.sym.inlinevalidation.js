@@ -17,6 +17,10 @@
  *
  * changelog:
  * --------------------------------------------------------------------------------------------
+ * - 1 rev 1:
+ * --------------------------------------------------------------------------------------------
+ *		- added more reliable jQuery version sniffing
+ * --------------------------------------------------------------------------------------------
  * - 1:
  * --------------------------------------------------------------------------------------------
  *		- considered stable
@@ -69,7 +73,7 @@
 			});
 		}
 	},
-	$_version = parseFloat($.fn.jquery);
+	$_version = +$.fn.jquery.replace(/\./g, '');
 
 	function getFieldValue(field, name) {
 		if ((name === 'input' || name === 'textarea')) {
@@ -109,8 +113,7 @@
 			this.fields = this.form.find('textarea, input:not([type^=hidden])').not(':submit').not(':reset');
 			this.action = this.form.find(exp_action).attr('name') + '=submit';
 			this.name = this.action.match(exp_fieldname)[1];
-			this.options = $.extend({},
-			this.defaults, o);
+			this.options = $.extend({}, this.defaults, o);
 			this.requiredFields = $();
 			// a missing trailing slash in the URL causes automatic GET request instead of POST
 			this.options.url = this.options.url.match(/\/$/) ? this.options.url: this.options.url + '/';
@@ -177,7 +180,7 @@
 			i = 0,
 
 			// legacy support for jquery < 1.6
-			dataName = $_version < 1.6 ? this.nameSpace + '-field-validates': $.camelCase(this.nameSpace + '-field-validates');
+			dataName = $_version < 160 ? this.nameSpace + '-field-validates': $.camelCase(this.nameSpace + '-field-validates');
 			event.preventDefault();
 
 			// check if all fields allready validate
